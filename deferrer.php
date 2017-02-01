@@ -3,6 +3,7 @@
  * Plugin Name: Deferrer
  * Author: Allan Christian Carlos
  * Author URI: mailto:allanchristiancarlos@gmail.com
+ * Description: Deferring plugin for javascript and css
  */
 
 if (!defined('ABSPATH')) {
