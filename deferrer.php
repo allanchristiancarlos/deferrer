@@ -1,6 +1,8 @@
 <?php
 /**
  * Plugin Name: Deferrer
+ * Author: Allan Christian Carlos
+ * Author URI: mailto:allanchristiancarlos@gmail.com
  */
 
 if (!defined('ABSPATH')) {
