@@ -13,18 +13,22 @@ if (!defined('ABSPATH')) {
 
 class WP_Plugin_Deferrer
 {
+	private $queue = array();
+
 	/**
 	 * Constructor
 	 */
 	public function __construct()
 	{
 		add_action('wp_enqueue_scripts', array($this, 'enqueue'), 999999999);
-		add_action('wp_enqueue_scripts', array($this, 'enqueue1'));
-		add_action('wp_enqueue_scripts', array($this, 'dequeue_defered_assets'), 99999999);
+		add_action('wp_enqueue_scripts', array($this, 'dequeue_defered_assets'), 99999);
 	}
 
 	public function dequeue_defered_assets()
 	{
+		global $wp_scripts, $wp_styles;
+		$this->queue['script'] = $wp_scripts->queue;
+		$this->queue['style'] = $wp_styles->queue;
 		$script_handles = $this->get_deferred_scripts();
 		foreach($script_handles as $script_handle) {
 			wp_dequeue_script($script_handle);
@@ -44,23 +48,6 @@ class WP_Plugin_Deferrer
 		}
 	}
 
-	public function enqueue1()
-	{
-		$plugin_url = plugin_dir_url(__FILE__);
-		wp_register_script('sampledep', $plugin_url . 'deferred-dep.js', null, '1.0', false);
-
-		wp_register_script('sample', $plugin_url . 'deferred.js', array('sampledep'), '1.0', false);
-		wp_enqueue_script('sample');
-
-		wp_register_style('sample-dep1', $plugin_url . 'deferred-dep1.css', null, '1.0');
-		wp_register_style('sample-dep2', $plugin_url . 'deferred-dep2.css', null, '1.0');
-
-		wp_register_style('sample2', $plugin_url . 'deferred2.css', array('sample-dep1', 'sample-dep2'), '1.0');
-		wp_enqueue_style('sample2');
-		wp_register_style('sample', $plugin_url . 'deferred.css', array('sample-dep1'), '1.0');
-		wp_enqueue_style('sample');
-	}
-
 	/**
 	 * Enqueue assets
 	 * @access public
@@ -70,7 +57,7 @@ class WP_Plugin_Deferrer
 	{	
 		$plugin_url = plugin_dir_url(__FILE__);
 
-		wp_register_script('deferrer', $plugin_url . 'js/deferrer.js', array('jquery'), '1.0', true);
+		wp_register_script('deferrer', $plugin_url . 'js/deferrer.js', array(), '1.0', true);
 		wp_enqueue_script('deferrer');
 
 		wp_localize_script('deferrer', 'WP_Plugin_Deferrer_Localize', $this->localization());
@@ -83,8 +70,9 @@ class WP_Plugin_Deferrer
 	public function localization()
 	{
 		$collection = array(
-			'scripts'  => $this->get_scripts_html(),
-			'styles'  => $this->get_styles_html()
+			'scripts' => $this->get_scripts_html(),
+			'styles'  => $this->get_styles_html(),
+			'test' =>  array_merge($this->get_deferred_scripts(), $this->get_dependent_assets($this->get_deferred_scripts(), 'script'))
 		);
 
 		return apply_filters('deferrer_localization', $collection);
@@ -125,7 +113,9 @@ class WP_Plugin_Deferrer
 
 			foreach($dependencies as $dependency_handle) {
 				foreach($registered_assets as $registered_asset_handle => $registered_asset) {
-					if (in_array($dependency_handle, $registered_asset->deps) && $registered_asset_handle !== $handle) {
+					if (   (in_array($dependency_handle, $registered_asset->deps)) 
+						&& ($registered_asset_handle !== $handle)
+						&& (in_array($registered_asset_handle, $this->queue[$type]))) {
 						$siblings[] = $registered_asset_handle;
 						$siblings += $registered_asset->deps;
 					}
@@ -138,12 +128,12 @@ class WP_Plugin_Deferrer
 
 	public function get_deferred_styles()
 	{
-		return apply_filters('deferrer_get_deferred_styles', array('sample'));
+		return apply_filters('deferrer_get_deferred_styles', array('loancenter', 'google-open-sans', 'bootstrap', 'font-awesome'));
 	}
 
 	public function get_deferred_scripts()
 	{
-		return apply_filters('deferrer_get_deferred_scripts', array('sample'));
+		return apply_filters('deferrer_get_deferred_scripts', array('main-js', 'wpb_composer_front_js'));
 	}
 }
 
